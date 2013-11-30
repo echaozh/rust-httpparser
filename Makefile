@@ -17,8 +17,8 @@ libhttpparser.dummy: httpparser.rc $(RUST_SRC) libhttp_parser.a
 	$(RUSTC) $(RUSTFLAGS) $<
 	touch $@
 
-# httpparser-test: http_client.rc $(RUST_SRC) libhttp_parser.a
-# 	$(RUSTC) $(RUSTFLAGS) $< -o $@ --test
+httpparser-test: httpparser.rc $(RUST_SRC) libhttp_parser.a
+	$(RUSTC) $(RUSTFLAGS) $< -o $@ --test
 
 libhttp_parser.a: http_parser.o
 	$(AR) rcs $@ $<
@@ -26,8 +26,8 @@ libhttp_parser.a: http_parser.o
 http_parser.o: http-parser/http_parser.c
 	$(CC) $(CFLAGS) $< -o $@ -c
 
-# check: http_client-test
-# 	./http_client-test
+check: httpparser-test
+	./httpparser-test
 
 .PHONY: clean
 clean:

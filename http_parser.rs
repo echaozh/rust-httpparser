@@ -355,9 +355,9 @@ static HTTP_PATCH: u32 = 24_u32;
 static HTTP_PURGE: u32 = 25_u32;
 
 type enum_http_parser_type = c_uint;
-static HTTP_REQUEST: u32 = 0_u32;
+pub static HTTP_REQUEST: u32 = 0_u32;
 pub static HTTP_RESPONSE: u32 = 1_u32;
-static HTTP_BOTH: u32 = 2_u32;
+pub static HTTP_BOTH: u32 = 2_u32;
 
 type enum_flags = c_uint;
 static F_CHUNKED: u32 = 1_u32;
@@ -367,7 +367,7 @@ static F_TRAILING: u32 = 8_u32;
 static F_UPGRADE: u32 = 16_u32;
 static F_SKIPBODY: u32 = 32_u32;
 
-type enum_http_errno = c_uint;
+pub type enum_http_errno = c_uint;
 static HPE_OK: u32 = 0_u32;
 static HPE_CB_message_begin: u32 = 1_u32;
 static HPE_CB_url: u32 = 2_u32;
@@ -416,6 +416,7 @@ pub struct struct_http_parser {
 pub struct struct_http_parser_settings {
     on_message_begin: http_cb,
     on_url: http_data_cb,
+    on_status_complete: http_cb,
     on_header_field: http_data_cb,
     on_header_value: http_data_cb,
     on_headers_complete: http_cb,

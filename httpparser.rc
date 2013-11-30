@@ -9,6 +9,10 @@
 extern mod extra;
 
 pub use parser::{Parser, ParserCallbacks};
+use std::hashmap::HashMap;
+use std::ptr::to_mut_unsafe_ptr;
+use std::str;
+// use std::str::raw;
 
 pub mod http_parser;
 mod parser;
@@ -57,4 +61,93 @@ pub enum StatusCode {
     StatusGatewayTimeout = 504,
     StatusHTTPVersionNotSupported = 505,
     StatusUnknown
+}
+
+struct Request {
+    parser: ~Parser,
+
+    url: ~str,
+    headers: ~HashMap<~str, ~str>,
+    body: ~str,
+
+    // temporary
+    header: ~str
+}
+
+impl Request {
+    fn on_message_begin(&self) -> bool {
+        println!("on message begin");
+        true
+    }
+    fn on_url(&mut self, data: ~[u8]) -> bool {
+        self.url = self.url + str::from_utf8_owned(data);
+        println!("on url, new url: {}", self.url);
+        true
+    }
+    fn on_status_complete(&self) -> bool {
+        println!("on status complete");
+        true
+    }
+    fn on_header_field(&mut self, data: ~[u8]) -> bool {
+        self.header = self.header + str::from_utf8_owned(data);
+        println!("on header field: {}", self.header);
+        true
+    }
+    fn on_header_value(&mut self, data: ~[u8]) -> bool {
+        let v = self.headers.find_or_insert(self.header.clone(), ~"");
+        *v = *v + str::from_utf8_owned(data);
+        println!("on header value: {} => {}", self.header, *v);
+        self.header = ~"";
+        true
+    }
+    fn on_headers_complete(&self) -> bool {
+        println!("on headers complete");
+        true
+    }
+    fn on_body(&mut self, data: ~[u8]) -> bool {
+        self.body = self.body + str::from_utf8_owned(data);
+        println!("on body: {}", self.body);
+        true
+    }
+    fn on_message_complete(&self) -> bool {
+        println!("on message complete: {}", self.parser.method());
+        true
+    }
+}
+
+fn Request() -> Request {
+    Request {
+        parser: ~Parser(),
+        url: ~"",
+        headers: ~HashMap::new(),
+        body: ~"",
+        header: ~""
+    }
+}
+
+#[test]
+// #[allow(non_implicitly_copyable_typarams)]
+pub fn test_simple_request() {
+    let mut request = ~Request();
+
+    let unsafe_req = to_mut_unsafe_ptr(&mut request);
+    let callbacks = ParserCallbacks {
+        on_message_begin: || unsafe { (*unsafe_req).on_message_begin() },
+        on_url: |data| unsafe { (*unsafe_req).on_url(data) },
+        on_status_complete: || unsafe { (*unsafe_req).on_status_complete() },
+        on_header_field: |data| unsafe { (*unsafe_req).on_header_field(data) },
+        on_header_value: |data| unsafe { (*unsafe_req).on_header_value(data) },
+        on_headers_complete: || unsafe { (*unsafe_req).on_headers_complete() },
+        on_body: |data| unsafe { (*unsafe_req).on_body(data) },
+        on_message_complete: || unsafe { (*unsafe_req).on_message_complete() }
+    };
+
+    let mut data = ~"POST / HTTP/1.0\r\nHost: localhost\r\nContent-Length:4\r\n\r\ntest";
+    let raw_data = unsafe {str::raw::as_owned_vec(&mut data).clone()};
+    let parsed = request.parser.execute(raw_data, &callbacks);
+    if parsed != data.len() {
+        // FIXME: Need tests
+        fail!("http parse failure: %? != %? => %?", parsed, data.len(),
+              request.parser.error());
+    }
 }
